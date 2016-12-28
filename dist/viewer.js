@@ -1,11 +1,11 @@
 /*!
- * Viewer v0.5.1
+ * Viewer v0.5.2
  * https://github.com/fengyuanchen/viewer
  *
  * Copyright (c) 2015-2016 Fengyuan Chen
  * Released under the MIT license
  *
- * Date: 2016-03-11T07:57:59.486Z
+ * Date: 2016-12-28T09:39:18.120Z
  */
 
 (function (factory) {
@@ -118,12 +118,13 @@
     var scaleX = options.scaleX;
     var scaleY = options.scaleY;
 
-    if (isNumber(rotate)) {
-      transforms.push('rotate(' + rotate + 'deg)');
-    }
-
+    // Scale should come first before rotate
     if (isNumber(scaleX) && isNumber(scaleY)) {
       transforms.push('scale(' + scaleX + ',' + scaleY + ')');
+    }
+
+    if (isNumber(rotate)) {
+      transforms.push('rotate(' + rotate + 'deg)');
     }
 
     return transforms.length ? transforms.join(' ') : 'none';
@@ -307,6 +308,9 @@
       if (!options.rotatable) {
         $toolbar.find('li[class*=rotate]').addClass(CLASS_INVISIBLE).appendTo($toolbar);
       }
+      if (!options.hdable) {
+          $toolbar.find('li[class=viewer-height-definition]').addClass(CLASS_INVISIBLE).appendTo($toolbar);
+        }
 
       $navbar.addClass(!options.navbar ? CLASS_HIDE : getResponsiveClass(options.navbar));
       $button.toggleClass(CLASS_HIDE, !options.button);
@@ -403,118 +407,132 @@
       $window.off(EVENT_RESIZE, this._resize);
     },
 
-    render: function () {
-      this.initContainer();
-      this.initViewer();
-      this.initList();
-      this.renderViewer();
-    },
+render: function () {
+    this.initContainer();
+    this.initViewer();
+    this.initList();
+    this.renderViewer();
+}
+,
 
-    initContainer: function () {
-      this.container = {
+initContainer: function () {
+    this.container = {
         width: $window.innerWidth(),
         height: $window.innerHeight()
-      };
-    },
+    };
+}
+,
 
-    initViewer: function () {
-      var options = this.options;
-      var $parent = this.$parent;
-      var viewer;
+initViewer: function () {
+    var options = this.options;
+    var $parent = this.$parent;
+    var viewer;
 
-      if (options.inline) {
+    if (options.inline) {
         this.parent = viewer = {
-          width: max($parent.width(), options.minWidth),
-          height: max($parent.height(), options.minHeight)
+            width: max($parent.width(), options.minWidth),
+            height: max($parent.height(), options.minHeight)
         };
-      }
+    }
 
-      if (this.isFulled || !viewer) {
+    if (this.isFulled || !viewer) {
         viewer = this.container;
-      }
+    }
 
-      this.viewer = $.extend({}, viewer);
-    },
+    this.viewer = $.extend({}, viewer);
+}
+,
 
-    renderViewer: function () {
-      if (this.options.inline && !this.isFulled) {
+renderViewer: function () {
+    if (this.options.inline && !this.isFulled) {
         this.$viewer.css(this.viewer);
-      }
-    },
+    }
+}
+,
 
-    initList: function () {
-      var options = this.options;
-      var $this = this.$element;
-      var $list = this.$list;
-      var list = [];
+initList: function () {
+    var options = this.options;
+    var $this = this.$element;
+    var $list = this.$list;
+    var list = [];
 
-      this.$images.each(function (i) {
+    this.$images.each(function (i) {
         var src = this.src;
         var alt = this.alt || getImageName(src);
         var url = options.url;
 
         if (!src) {
-          return;
+            return;
         }
 
         if (isString(url)) {
-          url = this.getAttribute(url);
+            url = this.getAttribute(url);
         } else if ($.isFunction(url)) {
-          url = url.call(this, this);
+            url = url.call(this, this);
+        }
+        var hdUrl=options.hdUrl;
+        if (isString(hdUrl)) {
+            hdUrl = this.getAttribute(hdUrl);
+        } else if ($.isFunction(hdUrl)) {
+            hdUrl = hdUrl.call(this, this);
         }
 
         list.push(
-          '<li>' +
+            '<li>' +
             '<img' +
-              ' src="' + src + '"' +
-              ' data-action="view"' +
-              ' data-index="' +  i + '"' +
-              ' data-original-url="' +  (url || src) + '"' +
-              ' alt="' +  alt + '"' +
+            ' src="' + src + '"' +
+            ' data-action="view"' +
+            ' data-index="' + i + '"' +
+            ' data-original-url="' + (url || src) + '"' +
+            ' data-hd-url="' + (hdUrl || (url || src)) + '"' +
+            ' alt="' + alt + '"' +
             '>' +
-          '</li>'
+            '</li>'
         );
-      });
+    });
 
-      $list.html(list.join('')).find(SELECTOR_IMG).one(EVENT_LOAD, {
+    $list.html(list.join('')).find(SELECTOR_IMG).one(EVENT_LOAD, {
         filled: true
-      }, $.proxy(this.loadImage, this));
+    }, $.proxy(this.loadImage, this));
 
-      this.$items = $list.children();
+    this.$items = $list.children();
 
-      if (options.transition) {
+    if (options.transition) {
         $this.one(EVENT_VIEWED, function () {
-          $list.addClass(CLASS_TRANSITION);
+            $list.addClass(CLASS_TRANSITION);
         });
-      }
-    },
+    }
+}
+,
 
-    renderList: function (index) {
-      var i = index || this.index;
-      var width = this.$items.eq(i).width();
-      var outerWidth = width + 1; // 1 pixel of `margin-left` width
+renderList: function (index) {
+    var i = index || this.index;
+    var width = this.$items.eq(i).width();
+    var outerWidth = width + 1; // 1 pixel of `margin-left` width
 
-      // Place the active item in the center of the screen
-      this.$list.css({
+    // Place the active item in the center of the screen
+    this.$list.css({
         width: outerWidth * this.length,
         marginLeft: (this.viewer.width - width) / 2 - outerWidth * i
-      });
-    },
+    });
+}
+,
 
-    resetList: function () {
-      this.$list.empty().removeClass(CLASS_TRANSITION).css('margin-left', 0);
-    },
+resetList: function () {
+    this.$list.empty().removeClass(CLASS_TRANSITION).css('margin-left', 0);
+}
+,
 
-    initImage: function (callback) {
-      var options = this.options;
-      var $image = this.$image;
-      var viewer = this.viewer;
-      var footerHeight = this.$footer.height();
-      var viewerWidth = viewer.width;
-      var viewerHeight = max(viewer.height - footerHeight, footerHeight);
-      var oldImage = this.image || {};
+initImage: function (callback) {
+    var options = this.options;
+    var $image = this.$image;
+    var viewer = this.viewer;
+    var footerHeight = this.$footer.height();
+    var viewerWidth = viewer.width;
+    var viewerHeight = max(viewer.height - footerHeight, footerHeight);
+    var oldImage = this.image || {};
 
-      getImageSize($image[0], $.proxy(function (naturalWidth, naturalHeight) {
+    getImageSize($image[0], $.proxy(function (naturalWidth, naturalHeight) {
         var aspectRatio = naturalWidth / naturalHeight;
         var width = viewerWidth;
         var height = viewerHeight;
@@ -522,743 +540,764 @@
         var image;
 
         if (viewerHeight * aspectRatio > viewerWidth) {
-          height = viewerWidth / aspectRatio;
+            height = viewerWidth / aspectRatio;
         } else {
-          width = viewerHeight * aspectRatio;
+            width = viewerHeight * aspectRatio;
         }
 
         width = min(width * 0.9, naturalWidth);
         height = min(height * 0.9, naturalHeight);
 
         image = {
-          naturalWidth: naturalWidth,
-          naturalHeight: naturalHeight,
-          aspectRatio: aspectRatio,
-          ratio: width / naturalWidth,
-          width: width,
-          height: height,
-          left: (viewerWidth - width) / 2,
-          top: (viewerHeight - height) / 2
+            naturalWidth: naturalWidth,
+            naturalHeight: naturalHeight,
+            aspectRatio: aspectRatio,
+            ratio: width / naturalWidth,
+            width: width,
+            height: height,
+            left: (viewerWidth - width) / 2,
+            top: (viewerHeight - height) / 2
         };
 
         initialImage = $.extend({}, image);
 
         if (options.rotatable) {
-          image.rotate = oldImage.rotate || 0;
-          initialImage.rotate = 0;
+            image.rotate = oldImage.rotate || 0;
+            initialImage.rotate = 0;
         }
 
         if (options.scalable) {
-          image.scaleX = oldImage.scaleX || 1;
-          image.scaleY = oldImage.scaleY || 1;
-          initialImage.scaleX = 1;
-          initialImage.scaleY = 1;
+            image.scaleX = oldImage.scaleX || 1;
+            image.scaleY = oldImage.scaleY || 1;
+            initialImage.scaleX = 1;
+            initialImage.scaleY = 1;
         }
 
         this.image = image;
         this.initialImage = initialImage;
 
         if ($.isFunction(callback)) {
-          callback();
+            callback();
         }
-      }, this));
-    },
+    }, this));
+}
+,
 
-    renderImage: function (callback) {
-      var image = this.image;
-      var $image = this.$image;
+renderImage: function (callback) {
+    var image = this.image;
+    var $image = this.$image;
 
-      $image.css({
+    $image.css({
         width: image.width,
         height: image.height,
         marginLeft: image.left,
         marginTop: image.top,
         transform: getTransform(image)
-      });
+    });
 
-      if ($.isFunction(callback)) {
+    if ($.isFunction(callback)) {
         if (this.transitioning) {
-          $image.one(EVENT_TRANSITIONEND, callback);
+            $image.one(EVENT_TRANSITIONEND, callback);
         } else {
-          callback();
+            callback();
         }
-      }
-    },
+    }
+}
+,
 
-    resetImage: function () {
-      if (this.$image) {
+resetImage: function () {
+    if (this.$image) {
         this.$image.remove();
         this.$image = null;
-      }
-    },
+    }
+}
+,
 
-    start: function (e) {
-      var target = e.target;
+start: function (e) {
+    var target = e.target;
 
-      if ($(target).is('img')) {
+    if ($(target).is('img')) {
         this.target = target;
         this.show();
-      }
-    },
+    }
+}
+,
 
-    click: function (e) {
-      var $target = $(e.target);
-      var action = $target.data('action');
-      var image = this.image;
+click: function (e) {
+    var $target = $(e.target);
+    var action = $target.data('action');
+    var image = this.image;
 
-      switch (action) {
+    switch (action) {
         case 'mix':
-          if (this.isPlayed) {
-            this.stop();
-          } else {
-            if (this.options.inline) {
-              if (this.isFulled) {
-                this.exit();
-              } else {
-                this.full();
-              }
+            if (this.isPlayed) {
+                this.stop();
             } else {
-              this.hide();
+                if (this.options.inline) {
+                    if (this.isFulled) {
+                        this.exit();
+                    } else {
+                        this.full();
+                    }
+                } else {
+                    this.hide();
+                }
             }
-          }
 
-          break;
+            break;
 
         case 'view':
-          this.view($target.data('index'));
-          break;
+            this.view($target.data('index'));
+            break;
 
         case 'zoom-in':
-          this.zoom(0.1, true);
-          break;
+            this.zoom(0.1, true);
+            break;
 
         case 'zoom-out':
-          this.zoom(-0.1, true);
-          break;
+            this.zoom(-0.1, true);
+            break;
 
         case 'one-to-one':
-          this.toggle();
-          break;
+            this.toggle();
+            break;
 
         case 'reset':
-          this.reset();
-          break;
+            this.reset();
+            break;
 
         case 'prev':
-          this.prev();
-          break;
+            this.prev();
+            break;
 
         case 'play':
-          this.play();
-          break;
+            this.play();
+            break;
 
         case 'next':
-          this.next();
-          break;
+            this.next();
+            break;
 
         case 'rotate-left':
-          this.rotate(-90);
-          break;
+            this.rotate(-90);
+            break;
 
         case 'rotate-right':
-          this.rotate(90);
-          break;
+            this.rotate(90);
+            break;
 
         case 'flip-horizontal':
-          this.scaleX(-image.scaleX || -1);
-          break;
+            this.scaleX(-image.scaleX || -1);
+            break;
 
         case 'flip-vertical':
-          this.scaleY(-image.scaleY || -1);
-          break;
+            this.scaleY(-image.scaleY || -1);
+            break;
+        case 'height-definition':
+            this.hd();
+            break;
 
         default:
-          if (this.isPlayed) {
-            this.stop();
-          }
-      }
-    },
+            if (this.isPlayed) {
+                this.stop();
+            }
+    }
+}
+,
 
-    load: function () {
-      var options = this.options;
-      var viewer = this.viewer;
-      var $image = this.$image;
+load: function () {
+    var options = this.options;
+    var viewer = this.viewer;
+    var $image = this.$image;
 
-      if (this.timeout) {
+    if (this.timeout) {
         clearTimeout(this.timeout);
         this.timeout = false;
-      }
+    }
 
-      $image.removeClass(CLASS_INVISIBLE).css('cssText', (
+    $image.removeClass(CLASS_INVISIBLE).css('cssText', (
         'width:0;' +
         'height:0;' +
         'margin-left:' + viewer.width / 2 + 'px;' +
         'margin-top:' + viewer.height / 2 + 'px;' +
         'max-width:none!important;' +
         'visibility:visible;'
-      ));
+    ));
 
-      this.initImage($.proxy(function () {
-        $image.
-          toggleClass(CLASS_TRANSITION, options.transition).
-          toggleClass(CLASS_MOVE, options.movable);
+    this.initImage($.proxy(function () {
+        $image.toggleClass(CLASS_TRANSITION, options.transition).toggleClass(CLASS_MOVE, options.movable);
 
         this.renderImage($.proxy(function () {
-          this.isViewed = true;
-          this.trigger(EVENT_VIEWED);
+            this.isViewed = true;
+            this.trigger(EVENT_VIEWED);
         }, this));
-      }, this));
-    },
+    }, this));
+}
+,
 
-    loadImage: function (e) {
-      var image = e.target;
-      var $image = $(image);
-      var $parent = $image.parent();
-      var parentWidth = $parent.width();
-      var parentHeight = $parent.height();
-      var filled = e.data && e.data.filled;
+loadImage: function (e) {
+    var image = e.target;
+    var $image = $(image);
+    var $parent = $image.parent();
+    var parentWidth = $parent.width();
+    var parentHeight = $parent.height();
+    var filled = e.data && e.data.filled;
 
-      getImageSize(image, function (naturalWidth, naturalHeight) {
+    getImageSize(image, function (naturalWidth, naturalHeight) {
         var aspectRatio = naturalWidth / naturalHeight;
         var width = parentWidth;
         var height = parentHeight;
 
         if (parentHeight * aspectRatio > parentWidth) {
-          if (filled) {
-            width = parentHeight * aspectRatio;
-          } else {
-            height = parentWidth / aspectRatio;
-          }
+            if (filled) {
+                width = parentHeight * aspectRatio;
+            } else {
+                height = parentWidth / aspectRatio;
+            }
         } else {
-          if (filled) {
-            height = parentWidth / aspectRatio;
-          } else {
-            width = parentHeight * aspectRatio;
-          }
+            if (filled) {
+                height = parentWidth / aspectRatio;
+            } else {
+                width = parentHeight * aspectRatio;
+            }
         }
 
         $image.css({
-          width: width,
-          height: height,
-          marginLeft: (parentWidth - width) / 2,
-          marginTop: (parentHeight - height) / 2
+            width: width,
+            height: height,
+            marginLeft: (parentWidth - width) / 2,
+            marginTop: (parentHeight - height) / 2
         });
-      });
-    },
+    });
+}
+,
 
-    resize: function () {
-      this.initContainer();
-      this.initViewer();
-      this.renderViewer();
-      this.renderList();
+resize: function () {
+    this.initContainer();
+    this.initViewer();
+    this.renderViewer();
+    this.renderList();
 
-      if (this.isViewed) {
+    if (this.isViewed) {
         this.initImage($.proxy(function () {
-          this.renderImage();
+            this.renderImage();
         }, this));
-      }
+    }
 
-      if (this.isPlayed) {
-        this.$player.
-          find(SELECTOR_IMG).
-          one(EVENT_LOAD, $.proxy(this.loadImage, this)).
-          trigger(EVENT_LOAD);
-      }
-    },
+    if (this.isPlayed) {
+        this.$player.find(SELECTOR_IMG).one(EVENT_LOAD, $.proxy(this.loadImage, this)).trigger(EVENT_LOAD);
+    }
+}
+,
 
-    wheel: function (event) {
-      var e = event.originalEvent || event;
-      var ratio = num(this.options.zoomRatio) || 0.1;
-      var delta = 1;
+wheel: function (event) {
+    var e = event.originalEvent || event;
+    var ratio = num(this.options.zoomRatio) || 0.1;
+    var delta = 1;
 
-      if (!this.isViewed) {
+    if (!this.isViewed) {
         return;
-      }
+    }
 
-      event.preventDefault();
+    event.preventDefault();
 
-      // Limit wheel speed to prevent zoom too fast
-      if (this.wheeling) {
+    // Limit wheel speed to prevent zoom too fast
+    if (this.wheeling) {
         return;
-      }
+    }
 
-      this.wheeling = true;
+    this.wheeling = true;
 
-      setTimeout($.proxy(function () {
+    setTimeout($.proxy(function () {
         this.wheeling = false;
-      }, this), 50);
+    }, this), 50);
 
-      if (e.deltaY) {
+    if (e.deltaY) {
         delta = e.deltaY > 0 ? 1 : -1;
-      } else if (e.wheelDelta) {
+    } else if (e.wheelDelta) {
         delta = -e.wheelDelta / 120;
-      } else if (e.detail) {
+    } else if (e.detail) {
         delta = e.detail > 0 ? 1 : -1;
-      }
+    }
 
-      this.zoom(-delta * ratio, true, event);
-    },
+    this.zoom(-delta * ratio, true, event);
+}
+,
 
-    keydown: function (e) {
-      var options = this.options;
-      var which = e.which;
+keydown: function (e) {
+    var options = this.options;
+    var which = e.which;
 
-      if (!this.isFulled || !options.keyboard) {
+    if (!this.isFulled || !options.keyboard) {
         return;
-      }
+    }
 
-      switch (which) {
+    switch (which) {
 
         // (Key: Esc)
         case 27:
-          if (this.isPlayed) {
-            this.stop();
-          } else {
-            if (options.inline) {
-              if (this.isFulled) {
-                this.exit();
-              }
+            if (this.isPlayed) {
+                this.stop();
             } else {
-              this.hide();
+                if (options.inline) {
+                    if (this.isFulled) {
+                        this.exit();
+                    }
+                } else {
+                    this.hide();
+                }
             }
-          }
 
-          break;
+            break;
 
         // (Key: Space)
         case 32:
-          if (this.isPlayed) {
-            this.stop();
-          }
+            if (this.isPlayed) {
+                this.stop();
+            }
 
-          break;
+            break;
 
         // View previous (Key: ←)
         case 37:
-          this.prev();
-          break;
+            this.prev();
+            break;
 
         // Zoom in (Key: ↑)
         case 38:
 
-          // Prevent scroll on Firefox
-          e.preventDefault();
+            // Prevent scroll on Firefox
+            e.preventDefault();
 
-          this.zoom(options.zoomRatio, true);
-          break;
+            this.zoom(options.zoomRatio, true);
+            break;
 
         // View next (Key: →)
         case 39:
-          this.next();
-          break;
+            this.next();
+            break;
 
         // Zoom out (Key: ↓)
         case 40:
 
-          // Prevent scroll on Firefox
-          e.preventDefault();
+            // Prevent scroll on Firefox
+            e.preventDefault();
 
-          this.zoom(-options.zoomRatio, true);
-          break;
+            this.zoom(-options.zoomRatio, true);
+            break;
 
         // Zoom out to initial size (Key: Ctrl + 0)
         case 48:
-          // Go to next
+        // Go to next
 
         // Zoom in to natural size (Key: Ctrl + 1)
         case 49:
-          if (e.ctrlKey || e.shiftKey) {
-            e.preventDefault();
-            this.toggle();
-          }
+            if (e.ctrlKey || e.shiftKey) {
+                e.preventDefault();
+                this.toggle();
+            }
 
-          break;
+            break;
 
         // No default
-      }
-    },
+    }
+}
+,
 
-    mousedown: function (event) {
-      var options = this.options;
-      var originalEvent = event.originalEvent;
-      var touches = originalEvent && originalEvent.touches;
-      var e = event;
-      var action = options.movable ? 'move' : false;
-      var touchesLength;
+mousedown: function (event) {
+    var options = this.options;
+    var originalEvent = event.originalEvent;
+    var touches = originalEvent && originalEvent.touches;
+    var e = event;
+    var action = options.movable ? 'move' : false;
+    var touchesLength;
 
-      if (!this.isViewed) {
+    if (!this.isViewed) {
         return;
-      }
+    }
 
-      if (touches) {
+    if (touches) {
         touchesLength = touches.length;
 
         if (touchesLength > 1) {
-          if (options.zoomable && touchesLength === 2) {
-            e = touches[1];
-            this.startX2 = e.pageX;
-            this.startY2 = e.pageY;
-            action = 'zoom';
-          } else {
-            return;
-          }
+            if (options.zoomable && touchesLength === 2) {
+                e = touches[1];
+                this.startX2 = e.pageX;
+                this.startY2 = e.pageY;
+                action = 'zoom';
+            } else {
+                return;
+            }
         } else {
-          if (this.isSwitchable()) {
-            action = 'switch';
-          }
+            if (this.isSwitchable()) {
+                action = 'switch';
+            }
         }
 
         e = touches[0];
-      }
+    }
 
-      if (action) {
-        event.preventDefault();
+    if (action) {
         this.action = action;
 
         // IE8  has `event.pageX/Y`, but not `event.originalEvent.pageX/Y`
         // IE10 has `event.originalEvent.pageX/Y`, but not `event.pageX/Y`
         this.startX = e.pageX || originalEvent && originalEvent.pageX;
         this.startY = e.pageY || originalEvent && originalEvent.pageY;
-      }
-    },
+    }
+}
+,
 
-    mousemove: function (event) {
-      var options = this.options;
-      var action = this.action;
-      var $image = this.$image;
-      var originalEvent = event.originalEvent;
-      var touches = originalEvent && originalEvent.touches;
-      var e = event;
-      var touchesLength;
+mousemove: function (event) {
+    var options = this.options;
+    var action = this.action;
+    var $image = this.$image;
+    var originalEvent = event.originalEvent;
+    var touches = originalEvent && originalEvent.touches;
+    var e = event;
+    var touchesLength;
 
-      if (!this.isViewed) {
+    if (!this.isViewed) {
         return;
-      }
+    }
 
-      if (touches) {
+    if (touches) {
         touchesLength = touches.length;
 
         if (touchesLength > 1) {
-          if (options.zoomable && touchesLength === 2) {
-            e = touches[1];
-            this.endX2 = e.pageX;
-            this.endY2 = e.pageY;
-          } else {
-            return;
-          }
+            if (options.zoomable && touchesLength === 2) {
+                e = touches[1];
+                this.endX2 = e.pageX;
+                this.endY2 = e.pageY;
+            } else {
+                return;
+            }
         }
 
         e = touches[0];
-      }
+    }
 
-      if (action) {
+    if (action) {
         event.preventDefault();
 
         if (action === 'move' && options.transition && $image.hasClass(CLASS_TRANSITION)) {
-          $image.removeClass(CLASS_TRANSITION);
+            $image.removeClass(CLASS_TRANSITION);
         }
 
         this.endX = e.pageX || originalEvent && originalEvent.pageX;
         this.endY = e.pageY || originalEvent && originalEvent.pageY;
 
         this.change(event);
-      }
-    },
+    }
+}
+,
 
-    mouseup: function (event) {
-      var action = this.action;
+mouseup: function (event) {
+    var action = this.action;
 
-      if (action) {
-        event.preventDefault();
-
+    if (action) {
         if (action === 'move' && this.options.transition) {
-          this.$image.addClass(CLASS_TRANSITION);
+            this.$image.addClass(CLASS_TRANSITION);
         }
 
         this.action = false;
-      }
-    },
+    }
+}
+,
 
-    // Show the viewer (only available in modal mode)
-    show: function () {
-      var options = this.options;
-      var $viewer;
+// Show the viewer (only available in modal mode)
+show: function () {
+    var options = this.options;
+    var $viewer;
 
-      if (options.inline || this.transitioning) {
+    if (options.inline || this.transitioning) {
         return;
-      }
+    }
 
-      if (!this.isBuilt) {
+    if (!this.isBuilt) {
         this.build();
-      }
+    }
 
-      if ($.isFunction(options.show)) {
+    if ($.isFunction(options.show)) {
         this.$element.one(EVENT_SHOW, options.show);
-      }
+    }
 
-      if (this.trigger(EVENT_SHOW).isDefaultPrevented()) {
+    if (this.trigger(EVENT_SHOW).isDefaultPrevented()) {
         return;
-      }
+    }
 
-      this.$body.addClass(CLASS_OPEN);
-      $viewer = this.$viewer.removeClass(CLASS_HIDE);
+    this.$body.addClass(CLASS_OPEN);
+    $viewer = this.$viewer.removeClass(CLASS_HIDE);
 
-      this.$element.one(EVENT_SHOWN, $.proxy(function () {
+    this.$element.one(EVENT_SHOWN, $.proxy(function () {
         this.view(this.target ? this.$images.index(this.target) : this.index);
         this.target = false;
-      }, this));
+    }, this));
 
-      if (options.transition) {
+    if (options.transition) {
         this.transitioning = true;
         $viewer.addClass(CLASS_TRANSITION);
         forceReflow($viewer[0]);
         $viewer.one(EVENT_TRANSITIONEND, $.proxy(this.shown, this)).addClass(CLASS_IN);
-      } else {
+    } else {
         $viewer.addClass(CLASS_IN);
         this.shown();
-      }
-    },
+    }
+}
+,
 
-    // Hide the viewer (only available in modal mode)
-    hide: function () {
-      var options = this.options;
-      var $viewer = this.$viewer;
+// Hide the viewer (only available in modal mode)
+hide: function () {
+    var options = this.options;
+    var $viewer = this.$viewer;
 
-      if (options.inline || this.transitioning || !this.isShown) {
+    if (options.inline || this.transitioning || !this.isShown) {
         return;
-      }
+    }
 
-      if ($.isFunction(options.hide)) {
+    if ($.isFunction(options.hide)) {
         this.$element.one(EVENT_HIDE, options.hide);
-      }
+    }
 
-      if (this.trigger(EVENT_HIDE).isDefaultPrevented()) {
+    if (this.trigger(EVENT_HIDE).isDefaultPrevented()) {
         return;
-      }
+    }
 
-      if (this.isViewed && options.transition) {
+    if (this.isViewed && options.transition) {
         this.transitioning = true;
         this.$image.one(EVENT_TRANSITIONEND, $.proxy(function () {
-          $viewer.one(EVENT_TRANSITIONEND, $.proxy(this.hidden, this)).removeClass(CLASS_IN);
+            $viewer.one(EVENT_TRANSITIONEND, $.proxy(this.hidden, this)).removeClass(CLASS_IN);
         }, this));
         this.zoomTo(0, false, false, true);
-      } else {
+    } else {
         $viewer.removeClass(CLASS_IN);
         this.hidden();
-      }
-    },
+    }
+}
+,
 
-    /**
-     * View one of the images with image's index
-     *
-     * @param {Number} index
-     */
-    view: function (index) {
-      var $title = this.$title;
-      var $image;
-      var $item;
-      var $img;
-      var url;
-      var alt;
+/**
+ * View one of the images with image's index
+ *
+ * @param {Number} index
+ * @param hd true
+ */
+view: function (index, hd) {
+    var $title = this.$title;
+    var $image;
+    var $item;
+    var $img;
+    var url;
+    var alt;
 
-      index = Number(index) || 0;
+    index = Number(index) || 0;
+    if (isUndefined(hd)) {
+        hd = false;
+    }
 
-      if (!this.isShown || this.isPlayed || index < 0 || index >= this.length ||
-        this.isViewed && index === this.index) {
+    if (!hd && (!this.isShown || this.isPlayed || index < 0 || index >= this.length ||
+        this.isViewed && index === this.index)) {
         return;
-      }
+    }
 
-      if (this.trigger(EVENT_VIEW).isDefaultPrevented()) {
+    if (this.trigger(EVENT_VIEW).isDefaultPrevented()) {
         return;
-      }
+    }
 
-      $item = this.$items.eq(index);
-      $img = $item.find(SELECTOR_IMG);
-      url = $img.data('originalUrl');
-      alt = $img.attr('alt');
+    $item = this.$items.eq(index);
+    $img = $item.find(SELECTOR_IMG);
 
-      this.$image = $image = $('<img src="' + url + '" alt="' + alt + '">');
+    url = $img.data(hd ? 'hdUrl' : 'originalUrl');
+    alt = $img.attr('alt');
 
-      if (this.isViewed) {
+    this.$image = $image = $('<img src="' + url + '" alt="' + alt + '">');
+
+    if (this.isViewed) {
         this.$items.eq(this.index).removeClass(CLASS_ACTIVE);
-      }
+    }
 
-      $item.addClass(CLASS_ACTIVE);
+    $item.addClass(CLASS_ACTIVE);
 
-      this.isViewed = false;
-      this.index = index;
-      this.image = null;
-      this.$canvas.html($image.addClass(CLASS_INVISIBLE));
+    this.isViewed = false;
+    this.index = index;
+    this.image = null;
+    this.$canvas.html($image.addClass(CLASS_INVISIBLE));
 
-      // Center current item
-      this.renderList();
+    // Center current item
+    this.renderList();
 
-      // Clear title
-      $title.empty();
+    // Clear title
+    $title.empty();
 
-      // Generate title after viewed
-      this.$element.one(EVENT_VIEWED, $.proxy(function () {
+    // Generate title after viewed
+    this.$element.one(EVENT_VIEWED, $.proxy(function () {
         var image = this.image;
         var width = image.naturalWidth;
         var height = image.naturalHeight;
 
         $title.html(alt + ' (' + width + ' &times; ' + height + ')');
-      }, this));
+    }, this));
 
-      if ($image[0].complete) {
+    if ($image[0].complete) {
         this.load();
-      } else {
+    } else {
         $image.one(EVENT_LOAD, $.proxy(this.load, this));
 
         if (this.timeout) {
-          clearTimeout(this.timeout);
+            clearTimeout(this.timeout);
         }
 
         // Make the image visible if it fails to load within 1s
         this.timeout = setTimeout($.proxy(function () {
-          $image.removeClass(CLASS_INVISIBLE);
-          this.timeout = false;
+            $image.removeClass(CLASS_INVISIBLE);
+            this.timeout = false;
         }, this), 1000);
-      }
-    },
+    }
+}
+,
 
-    // View the previous image
-    prev: function () {
-      this.view(max(this.index - 1, 0));
-    },
+// View the previous image
+prev: function () {
+    this.view(max(this.index - 1, 0));
+}
+,
 
-    // View the next image
-    next: function () {
-      this.view(min(this.index + 1, this.length - 1));
-    },
+// View the next image
+next: function () {
+    this.view(min(this.index + 1, this.length - 1));
+}
+,
 
-    /**
-     * Move the image with relative offsets
-     *
-     * @param {Number} offsetX
-     * @param {Number} offsetY (optional)
-     */
-    move: function (offsetX, offsetY) {
-      var image = this.image;
+/**
+ * Move the image with relative offsets
+ *
+ * @param {Number} offsetX
+ * @param {Number} offsetY (optional)
+ */
+move: function (offsetX, offsetY) {
+    var image = this.image;
 
-      this.moveTo(
+    this.moveTo(
         isUndefined(offsetX) ? offsetX : image.left + num(offsetX),
         isUndefined(offsetY) ? offsetY : image.top + num(offsetY)
-      );
-    },
+    );
+}
+,
 
-    /**
-     * Move the image to an absolute point
-     *
-     * @param {Number} x
-     * @param {Number} y (optional)
-     */
-    moveTo: function (x, y) {
-      var image = this.image;
-      var changed = false;
+/**
+ * Move the image to an absolute point
+ *
+ * @param {Number} x
+ * @param {Number} y (optional)
+ */
+moveTo: function (x, y) {
+    var image = this.image;
+    var changed = false;
 
-      // If "y" is not present, its default value is "x"
-      if (isUndefined(y)) {
+    // If "y" is not present, its default value is "x"
+    if (isUndefined(y)) {
         y = x;
-      }
+    }
 
-      x = num(x);
-      y = num(y);
+    x = num(x);
+    y = num(y);
 
-      if (this.isViewed && !this.isPlayed && this.options.movable) {
+    if (this.isViewed && !this.isPlayed && this.options.movable) {
         if (isNumber(x)) {
-          image.left = x;
-          changed = true;
+            image.left = x;
+            changed = true;
         }
 
         if (isNumber(y)) {
-          image.top = y;
-          changed = true;
+            image.top = y;
+            changed = true;
         }
 
         if (changed) {
-          this.renderImage();
+            this.renderImage();
         }
-      }
-    },
+    }
+}
+,
 
-    /**
-     * Zoom the image with a relative ratio
-     *
-     * @param {Number} ratio
-     * @param {Boolean} hasTooltip (optional)
-     * @param {jQuery Event} _event (private)
-     */
-    zoom: function (ratio, hasTooltip, _event) {
-      var image = this.image;
+/**
+ * Zoom the image with a relative ratio
+ *
+ * @param {Number} ratio
+ * @param {Boolean} hasTooltip (optional)
+ * @param {jQuery Event} _event (private)
+ */
+zoom: function (ratio, hasTooltip, _event) {
+    var image = this.image;
 
-      ratio = num(ratio);
+    ratio = num(ratio);
 
-      if (ratio < 0) {
-        ratio =  1 / (1 - ratio);
-      } else {
+    if (ratio < 0) {
+        ratio = 1 / (1 - ratio);
+    } else {
         ratio = 1 + ratio;
-      }
+    }
 
-      this.zoomTo(image.width * ratio / image.naturalWidth, hasTooltip, _event);
-    },
+    this.zoomTo(image.width * ratio / image.naturalWidth, hasTooltip, _event);
+}
+,
 
-    /**
-     * Zoom the image to an absolute ratio
-     *
-     * @param {Number} ratio
-     * @param {Boolean} hasTooltip (optional)
-     * @param {jQuery Event} _event (private)
-     * @param {Boolean} _zoomable (private)
-     */
-    zoomTo: function (ratio, hasTooltip, _event, _zoomable) {
-      var options = this.options;
-      var minZoomRatio = 0.01;
-      var maxZoomRatio = 100;
-      var image = this.image;
-      var width = image.width;
-      var height = image.height;
-      var originalEvent;
-      var newWidth;
-      var newHeight;
-      var offset;
-      var center;
+/**
+ * Zoom the image to an absolute ratio
+ *
+ * @param {Number} ratio
+ * @param {Boolean} hasTooltip (optional)
+ * @param {jQuery Event} _event (private)
+ * @param {Boolean} _zoomable (private)
+ */
+zoomTo: function (ratio, hasTooltip, _event, _zoomable) {
+    var options = this.options;
+    var minZoomRatio = 0.01;
+    var maxZoomRatio = 100;
+    var image = this.image;
+    var width = image.width;
+    var height = image.height;
+    var originalEvent;
+    var newWidth;
+    var newHeight;
+    var offset;
+    var center;
 
-      ratio = max(0, ratio);
+    ratio = max(0, ratio);
 
-      if (isNumber(ratio) && this.isViewed && !this.isPlayed && (_zoomable || options.zoomable)) {
+    if (isNumber(ratio) && this.isViewed && !this.isPlayed && (_zoomable || options.zoomable)) {
         if (!_zoomable) {
-          minZoomRatio = max(minZoomRatio, options.minZoomRatio);
-          maxZoomRatio = min(maxZoomRatio, options.maxZoomRatio);
-          ratio = min(max(ratio, minZoomRatio), maxZoomRatio);
+            minZoomRatio = max(minZoomRatio, options.minZoomRatio);
+            maxZoomRatio = min(maxZoomRatio, options.maxZoomRatio);
+            ratio = min(max(ratio, minZoomRatio), maxZoomRatio);
         }
 
         if (ratio > 0.95 && ratio < 1.05) {
-          ratio = 1;
+            ratio = 1;
         }
 
         newWidth = image.naturalWidth * ratio;
         newHeight = image.naturalHeight * ratio;
 
         if (_event && (originalEvent = _event.originalEvent)) {
-          offset = this.$viewer.offset();
-          center = originalEvent.touches ? getTouchesCenter(originalEvent.touches) : {
-            pageX: _event.pageX || originalEvent.pageX || 0,
-            pageY: _event.pageY || originalEvent.pageY || 0
-          };
+            offset = this.$viewer.offset();
+            center = originalEvent.touches ? getTouchesCenter(originalEvent.touches) : {
+                    pageX: _event.pageX || originalEvent.pageX || 0,
+                    pageY: _event.pageY || originalEvent.pageY || 0
+                };
 
-          // Zoom from the triggering point of the event
-          image.left -= (newWidth - width) * (
-            ((center.pageX - offset.left) - image.left) / width
-          );
-          image.top -= (newHeight - height) * (
-            ((center.pageY - offset.top) - image.top) / height
-          );
+            // Zoom from the triggering point of the event
+            image.left -= (newWidth - width) * (
+                    ((center.pageX - offset.left) - image.left) / width
+                );
+            image.top -= (newHeight - height) * (
+                    ((center.pageY - offset.top) - image.top) / height
+                );
         } else {
 
-          // Zoom from the center of the image
-          image.left -= (newWidth - width) / 2;
-          image.top -= (newHeight - height) / 2;
+            // Zoom from the center of the image
+            image.left -= (newWidth - width) / 2;
+            image.top -= (newHeight - height) / 2;
         }
 
         image.width = newWidth;
@@ -1267,113 +1306,119 @@
         this.renderImage();
 
         if (hasTooltip) {
-          this.tooltip();
+            this.tooltip();
         }
-      }
-    },
+    }
+}
+,
 
-    /**
-     * Rotate the image with a relative degree
-     *
-     * @param {Number} degree
-     */
-    rotate: function (degree) {
-      this.rotateTo((this.image.rotate || 0) + num(degree));
-    },
+/**
+ * Rotate the image with a relative degree
+ *
+ * @param {Number} degree
+ */
+rotate: function (degree) {
+    this.rotateTo((this.image.rotate || 0) + num(degree));
+}
+,
 
-    /**
-     * Rotate the image to an absolute degree
-     * https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function#rotate()
-     *
-     * @param {Number} degree
-     */
-    rotateTo: function (degree) {
-      var image = this.image;
+/**
+ * Rotate the image to an absolute degree
+ * https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function#rotate()
+ *
+ * @param {Number} degree
+ */
+rotateTo: function (degree) {
+    var image = this.image;
 
-      degree = num(degree);
+    degree = num(degree);
 
-      if (isNumber(degree) && this.isViewed && !this.isPlayed && this.options.rotatable) {
+    if (isNumber(degree) && this.isViewed && !this.isPlayed && this.options.rotatable) {
         image.rotate = degree;
         this.renderImage();
-      }
-    },
+    }
+}
+,
 
-    /**
-     * Scale the image
-     * https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function#scale()
-     *
-     * @param {Number} scaleX
-     * @param {Number} scaleY (optional)
-     */
-    scale: function (scaleX, scaleY) {
-      var image = this.image;
-      var changed = false;
+/**
+ * Scale the image
+ * https://developer.mozilla.org/en-US/docs/Web/CSS/transform-function#scale()
+ *
+ * @param {Number} scaleX
+ * @param {Number} scaleY (optional)
+ */
+scale: function (scaleX, scaleY) {
+    var image = this.image;
+    var changed = false;
 
-      // If "scaleY" is not present, its default value is "scaleX"
-      if (isUndefined(scaleY)) {
+    // If "scaleY" is not present, its default value is "scaleX"
+    if (isUndefined(scaleY)) {
         scaleY = scaleX;
-      }
+    }
 
-      scaleX = num(scaleX);
-      scaleY = num(scaleY);
+    scaleX = num(scaleX);
+    scaleY = num(scaleY);
 
-      if (this.isViewed && !this.isPlayed && this.options.scalable) {
+    if (this.isViewed && !this.isPlayed && this.options.scalable) {
         if (isNumber(scaleX)) {
-          image.scaleX = scaleX;
-          changed = true;
+            image.scaleX = scaleX;
+            changed = true;
         }
 
         if (isNumber(scaleY)) {
-          image.scaleY = scaleY;
-          changed = true;
+            image.scaleY = scaleY;
+            changed = true;
         }
 
         if (changed) {
-          this.renderImage();
+            this.renderImage();
         }
-      }
-    },
+    }
+}
+,
 
-    /**
-     * Scale the abscissa of the image
-     *
-     * @param {Number} scaleX
-     */
-    scaleX: function (scaleX) {
-      this.scale(scaleX, this.image.scaleY);
-    },
+/**
+ * Scale the abscissa of the image
+ *
+ * @param {Number} scaleX
+ */
+scaleX: function (scaleX) {
+    this.scale(scaleX, this.image.scaleY);
+}
+,
 
-    /**
-     * Scale the ordinate of the image
-     *
-     * @param {Number} scaleY
-     */
-    scaleY: function (scaleY) {
-      this.scale(this.image.scaleX, scaleY);
-    },
+/**
+ * Scale the ordinate of the image
+ *
+ * @param {Number} scaleY
+ */
+scaleY: function (scaleY) {
+    this.scale(this.image.scaleX, scaleY);
+}
+,
 
-    // Play the images
-    play: function () {
-      var options = this.options;
-      var $player = this.$player;
-      var load = $.proxy(this.loadImage, this);
-      var list = [];
-      var total = 0;
-      var index = 0;
-      var playing;
+// Play the images
+play: function () {
+    var options = this.options;
+    var $player = this.$player;
+    var load = $.proxy(this.loadImage, this);
+    var list = [];
+    var total = 0;
+    var index = 0;
+    var playing;
 
-      if (!this.isShown || this.isPlayed) {
+    if (!this.isShown || this.isPlayed) {
         return;
-      }
+    }
 
-      if (options.fullscreen) {
+    if (options.fullscreen) {
         this.requestFullscreen();
-      }
+    }
 
-      this.isPlayed = true;
-      $player.addClass(CLASS_SHOW);
+    this.isPlayed = true;
+    $player.addClass(CLASS_SHOW);
 
-      this.$items.each(function (i) {
+    this.$items.each(function (i) {
         var $this = $(this);
         var $img = $this.find(SELECTOR_IMG);
         var $image = $('<img src="' + $img.data('originalUrl') + '" alt="' + $img.attr('alt') + '">');
@@ -1383,262 +1428,277 @@
         $image.addClass(CLASS_FADE).toggleClass(CLASS_TRANSITION, options.transition);
 
         if ($this.hasClass(CLASS_ACTIVE)) {
-          $image.addClass(CLASS_IN);
-          index = i;
+            $image.addClass(CLASS_IN);
+            index = i;
         }
 
         list.push($image);
         $image.one(EVENT_LOAD, {
-          filled: false
+            filled: false
         }, load);
         $player.append($image);
-      });
+    });
 
-      if (isNumber(options.interval) && options.interval > 0) {
+    if (isNumber(options.interval) && options.interval > 0) {
         playing = $.proxy(function () {
-          this.playing = setTimeout(function () {
-            list[index].removeClass(CLASS_IN);
-            index++;
-            index = index < total ? index : 0;
-            list[index].addClass(CLASS_IN);
+            this.playing = setTimeout(function () {
+                list[index].removeClass(CLASS_IN);
+                index++;
+                index = index < total ? index : 0;
+                list[index].addClass(CLASS_IN);
 
-            playing();
-          }, options.interval);
+                playing();
+            }, options.interval);
         }, this);
 
         if (total > 1) {
-          playing();
+            playing();
         }
-      }
-    },
+    }
+}
+,
 
-    // Stop play
-    stop: function () {
-      if (!this.isPlayed) {
+// Stop play
+stop: function () {
+    if (!this.isPlayed) {
         return;
-      }
+    }
 
-      if (this.options.fullscreen) {
+    if (this.options.fullscreen) {
         this.exitFullscreen();
-      }
+    }
 
-      this.isPlayed = false;
-      clearTimeout(this.playing);
-      this.$player.removeClass(CLASS_SHOW).empty();
-    },
+    this.isPlayed = false;
+    clearTimeout(this.playing);
+    this.$player.removeClass(CLASS_SHOW).empty();
+}
+,
 
-    // Enter modal mode (only available in inline mode)
-    full: function () {
-      var options = this.options;
-      var $image = this.$image;
-      var $list = this.$list;
+// Enter modal mode (only available in inline mode)
+full: function () {
+    var options = this.options;
+    var $image = this.$image;
+    var $list = this.$list;
 
-      if (!this.isShown || this.isPlayed || this.isFulled || !options.inline) {
+    if (!this.isShown || this.isPlayed || this.isFulled || !options.inline) {
         return;
-      }
+    }
 
-      this.isFulled = true;
-      this.$body.addClass(CLASS_OPEN);
-      this.$button.addClass(CLASS_FULLSCREEN_EXIT);
+    this.isFulled = true;
+    this.$body.addClass(CLASS_OPEN);
+    this.$button.addClass(CLASS_FULLSCREEN_EXIT);
 
-      if (options.transition) {
+    if (options.transition) {
         $image.removeClass(CLASS_TRANSITION);
         $list.removeClass(CLASS_TRANSITION);
-      }
+    }
 
-      this.$viewer.addClass(CLASS_FIXED).removeAttr('style').css('z-index', options.zIndex);
-      this.initContainer();
-      this.viewer = $.extend({}, this.container);
-      this.renderList();
-      this.initImage($.proxy(function () {
+    this.$viewer.addClass(CLASS_FIXED).removeAttr('style').css('z-index', options.zIndex);
+    this.initContainer();
+    this.viewer = $.extend({}, this.container);
+    this.renderList();
+    this.initImage($.proxy(function () {
         this.renderImage(function () {
-          if (options.transition) {
-            setTimeout(function () {
-              $image.addClass(CLASS_TRANSITION);
-              $list.addClass(CLASS_TRANSITION);
-            }, 0);
-          }
+            if (options.transition) {
+                setTimeout(function () {
+                    $image.addClass(CLASS_TRANSITION);
+                    $list.addClass(CLASS_TRANSITION);
+                }, 0);
+            }
         });
-      }, this));
-    },
+    }, this));
+}
+,
 
-    // Exit modal mode (only available in inline mode)
-    exit: function () {
-      var options = this.options;
-      var $image = this.$image;
-      var $list = this.$list;
+// Exit modal mode (only available in inline mode)
+exit: function () {
+    var options = this.options;
+    var $image = this.$image;
+    var $list = this.$list;
 
-      if (!this.isFulled) {
+    if (!this.isFulled) {
         return;
-      }
+    }
 
-      this.isFulled = false;
-      this.$body.removeClass(CLASS_OPEN);
-      this.$button.removeClass(CLASS_FULLSCREEN_EXIT);
+    this.isFulled = false;
+    this.$body.removeClass(CLASS_OPEN);
+    this.$button.removeClass(CLASS_FULLSCREEN_EXIT);
 
-      if (options.transition) {
+    if (options.transition) {
         $image.removeClass(CLASS_TRANSITION);
         $list.removeClass(CLASS_TRANSITION);
-      }
+    }
 
-      this.$viewer.removeClass(CLASS_FIXED).css('z-index', options.zIndexInline);
-      this.viewer = $.extend({}, this.parent);
-      this.renderViewer();
-      this.renderList();
-      this.initImage($.proxy(function () {
+    this.$viewer.removeClass(CLASS_FIXED).css('z-index', options.zIndexInline);
+    this.viewer = $.extend({}, this.parent);
+    this.renderViewer();
+    this.renderList();
+    this.initImage($.proxy(function () {
         this.renderImage(function () {
-          if (options.transition) {
-            setTimeout(function () {
-              $image.addClass(CLASS_TRANSITION);
-              $list.addClass(CLASS_TRANSITION);
-            }, 0);
-          }
+            if (options.transition) {
+                setTimeout(function () {
+                    $image.addClass(CLASS_TRANSITION);
+                    $list.addClass(CLASS_TRANSITION);
+                }, 0);
+            }
         });
-      }, this));
-    },
+    }, this));
+}
+,
 
-    // Show the current ratio of the image with percentage
-    tooltip: function () {
-      var options = this.options;
-      var $tooltip = this.$tooltip;
-      var image = this.image;
-      var classes = [
-            CLASS_SHOW,
-            CLASS_FADE,
-            CLASS_TRANSITION
-          ].join(' ');
+// Show the current ratio of the image with percentage
+tooltip: function () {
+    var options = this.options;
+    var $tooltip = this.$tooltip;
+    var image = this.image;
+    var classes = [
+        CLASS_SHOW,
+        CLASS_FADE,
+        CLASS_TRANSITION
+    ].join(' ');
 
-      if (!this.isViewed || this.isPlayed || !options.tooltip) {
+    if (!this.isViewed || this.isPlayed || !options.tooltip) {
         return;
-      }
+    }
 
-      $tooltip.text(round(image.ratio * 100) + '%');
+    $tooltip.text(round(image.ratio * 100) + '%');
 
-      if (!this.tooltiping) {
+    if (!this.tooltiping) {
         if (options.transition) {
-          if (this.fading) {
-            $tooltip.trigger(EVENT_TRANSITIONEND);
-          }
+            if (this.fading) {
+                $tooltip.trigger(EVENT_TRANSITIONEND);
+            }
 
-          $tooltip.addClass(classes);
-          forceReflow($tooltip[0]);
-          $tooltip.addClass(CLASS_IN);
+            $tooltip.addClass(classes);
+            forceReflow($tooltip[0]);
+            $tooltip.addClass(CLASS_IN);
         } else {
-          $tooltip.addClass(CLASS_SHOW);
+            $tooltip.addClass(CLASS_SHOW);
         }
-      } else {
+    } else {
         clearTimeout(this.tooltiping);
-      }
+    }
 
-      this.tooltiping = setTimeout($.proxy(function () {
+    this.tooltiping = setTimeout($.proxy(function () {
         if (options.transition) {
-          $tooltip.one(EVENT_TRANSITIONEND, $.proxy(function () {
-            $tooltip.removeClass(classes);
-            this.fading = false;
-          }, this)).removeClass(CLASS_IN);
+            $tooltip.one(EVENT_TRANSITIONEND, $.proxy(function () {
+                $tooltip.removeClass(classes);
+                this.fading = false;
+            }, this)).removeClass(CLASS_IN);
 
-          this.fading = true;
+            this.fading = true;
         } else {
-          $tooltip.removeClass(CLASS_SHOW);
+            $tooltip.removeClass(CLASS_SHOW);
         }
 
         this.tooltiping = false;
-      }, this), 1000);
-    },
+    }, this), 1000);
+}
+,
 
-    // Toggle the image size between its natural size and initial size
-    toggle: function () {
-      if (this.image.ratio === 1) {
+// Toggle the image size between its natural size and initial size
+toggle: function () {
+    if (this.image.ratio === 1) {
         this.zoomTo(this.initialImage.ratio, true);
-      } else {
+    } else {
         this.zoomTo(1, true);
-      }
-    },
+    }
+}
+,
 
-    // Reset the image to its initial state
-    reset: function () {
-      if (this.isViewed && !this.isPlayed) {
+// Reset the image to its initial state
+reset: function () {
+    if (this.isViewed && !this.isPlayed) {
         this.image = $.extend({}, this.initialImage);
         this.renderImage();
-      }
-    },
+    }
+}
+,
 
-    // Update viewer when images changed
-    update: function () {
-      var $this = this.$element;
-      var $images = this.$images;
-      var indexes = [];
-      var index;
+// Update viewer when images changed
+update: function () {
+    var $this = this.$element;
+    var $images = this.$images;
+    var indexes = [];
+    var index;
 
-      if (this.isImg) {
+    if (this.isImg) {
 
         // Destroy viewer if the target image was deleted
         if (!$this.parent().length) {
-          return this.destroy();
+            return this.destroy();
         }
-      } else {
+    } else {
         this.$images = $images = $this.find(SELECTOR_IMG);
         this.length = $images.length;
-      }
+    }
 
-      if (this.isBuilt) {
+    if (this.isBuilt) {
         $.each(this.$items, function (i) {
-          var img = $(this).find('img')[0];
-          var image = $images[i];
+            var img = $(this).find('img')[0];
+            var image = $images[i];
 
-          if (image) {
-            if (image.src !== img.src) {
-              indexes.push(i);
+            if (image) {
+                if (image.src !== img.src) {
+                    indexes.push(i);
+                }
+            } else {
+                indexes.push(i);
             }
-          } else {
-            indexes.push(i);
-          }
         });
 
         this.$list.width('auto');
         this.initList();
 
         if (this.isShown) {
-          if (this.length) {
-            if (this.isViewed) {
-              index = $.inArray(this.index, indexes);
+            if (this.length) {
+                if (this.isViewed) {
+                    index = $.inArray(this.index, indexes);
 
-              if (index >= 0) {
+                    if (index >= 0) {
+                        this.isViewed = false;
+                        this.view(max(this.index - (index + 1), 0));
+                    } else {
+                        this.$items.eq(this.index).addClass(CLASS_ACTIVE);
+                    }
+                }
+            } else {
+                this.$image = null;
                 this.isViewed = false;
-                this.view(max(this.index - (index + 1), 0));
-              } else {
-                this.$items.eq(this.index).addClass(CLASS_ACTIVE);
-              }
+                this.index = 0;
+                this.image = null;
+                this.$canvas.empty();
+                this.$title.empty();
             }
-          } else {
-            this.$image = null;
-            this.isViewed = false;
-            this.index = 0;
-            this.image = null;
-            this.$canvas.empty();
-            this.$title.empty();
-          }
         }
-      }
-    },
+    }
+}
+,
 
-    // Destroy the viewer
-    destroy: function () {
-      var $this = this.$element;
+// Destroy the viewer
+destroy: function () {
+    var $this = this.$element;
 
-      if (this.options.inline) {
+    if (this.options.inline) {
         this.unbind();
-      } else {
+    } else {
         if (this.isShown) {
-          this.unbind();
+            this.unbind();
         }
 
         $this.off(EVENT_CLICK, this.start);
-      }
+    }
 
-      this.unbuild();
-      $this.removeData(NAMESPACE);
-    },
+    this.unbuild();
+    $this.removeData(NAMESPACE);
+}
+,
+
+// View the hd image
+hd: function () {
+    this.view(min(this.index, this.length), true);
+}
+,
 
     // A shortcut for triggering custom events
     trigger: function (type, data) {
@@ -1778,7 +1838,7 @@
     }
   };
 
-  Viewer.DEFAULTS = {
+Viewer.DEFAULTS = {
     // Enable inline mode
     inline: false,
 
@@ -1805,6 +1865,9 @@
 
     // Enable to rotate the image
     rotatable: true,
+
+    // Enable to height-definition the image
+    hdable: false,
 
     // Enable to scale the image
     scalable: true,
@@ -1846,6 +1909,9 @@
     // Type: String (an image attribute) or Function (should return an image URL)
     url: 'src',
 
+    // Define hd url
+    hdUrl: 'data-hd-url',
+
     // Event shortcuts
     build: null,
     built: null,
@@ -1855,39 +1921,40 @@
     hidden: null,
     view: null,
     viewed: null
-  };
+};
 
-  Viewer.setDefaults = function (options) {
+Viewer.setDefaults = function (options) {
     $.extend(Viewer.DEFAULTS, options);
-  };
+};
 
-  Viewer.TEMPLATE = (
+Viewer.TEMPLATE = (
     '<div class="viewer-container">' +
-      '<div class="viewer-canvas"></div>' +
-      '<div class="viewer-footer">' +
-        '<div class="viewer-title"></div>' +
-        '<ul class="viewer-toolbar">' +
-          '<li class="viewer-zoom-in" data-action="zoom-in"></li>' +
-          '<li class="viewer-zoom-out" data-action="zoom-out"></li>' +
-          '<li class="viewer-one-to-one" data-action="one-to-one"></li>' +
-          '<li class="viewer-reset" data-action="reset"></li>' +
-          '<li class="viewer-prev" data-action="prev"></li>' +
-          '<li class="viewer-play" data-action="play"></li>' +
-          '<li class="viewer-next" data-action="next"></li>' +
-          '<li class="viewer-rotate-left" data-action="rotate-left"></li>' +
-          '<li class="viewer-rotate-right" data-action="rotate-right"></li>' +
-          '<li class="viewer-flip-horizontal" data-action="flip-horizontal"></li>' +
-          '<li class="viewer-flip-vertical" data-action="flip-vertical"></li>' +
-        '</ul>' +
-        '<div class="viewer-navbar">' +
-          '<ul class="viewer-list"></ul>' +
-        '</div>' +
-      '</div>' +
-      '<div class="viewer-tooltip"></div>' +
-      '<div class="viewer-button" data-action="mix"></div>' +
-      '<div class="viewer-player"></div>' +
+    '<div class="viewer-canvas"></div>' +
+    '<div class="viewer-footer">' +
+    '<div class="viewer-title"></div>' +
+    '<ul class="viewer-toolbar">' +
+    '<li class="viewer-zoom-in" data-action="zoom-in"></li>' +
+    '<li class="viewer-zoom-out" data-action="zoom-out"></li>' +
+    '<li class="viewer-one-to-one" data-action="one-to-one"></li>' +
+    '<li class="viewer-reset" data-action="reset"></li>' +
+    '<li class="viewer-prev" data-action="prev"></li>' +
+    '<li class="viewer-play" data-action="play"></li>' +
+    '<li class="viewer-next" data-action="next"></li>' +
+    '<li class="viewer-rotate-left" data-action="rotate-left"></li>' +
+    '<li class="viewer-rotate-right" data-action="rotate-right"></li>' +
+    '<li class="viewer-flip-horizontal" data-action="flip-horizontal"></li>' +
+    '<li class="viewer-flip-vertical" data-action="flip-vertical"></li>' +
+    '<li class="viewer-height-definition" data-action="height-definition"></li>' +
+    '</ul>' +
+    '<div class="viewer-navbar">' +
+    '<ul class="viewer-list"></ul>' +
+    '</div>' +
+    '</div>' +
+    '<div class="viewer-tooltip"></div>' +
+    '<div class="viewer-button" data-action="mix"></div>' +
+    '<div class="viewer-player"></div>' +
     '</div>'
-  );
+);
 
   // Save the other viewer
   Viewer.other = $.fn.viewer;

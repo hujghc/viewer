@@ -33,6 +33,9 @@
       if (!options.rotatable) {
         $toolbar.find('li[class*=rotate]').addClass(CLASS_INVISIBLE).appendTo($toolbar);
       }
+      if (!options.hdable) {
+          $toolbar.find('li[class=viewer-height-definition]').addClass(CLASS_INVISIBLE).appendTo($toolbar);
+        }
 
       $navbar.addClass(!options.navbar ? CLASS_HIDE : getResponsiveClass(options.navbar));
       $button.toggleClass(CLASS_HIDE, !options.button);

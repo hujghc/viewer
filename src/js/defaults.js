@@ -1,4 +1,4 @@
-  Viewer.DEFAULTS = {
+Viewer.DEFAULTS = {
     // Enable inline mode
     inline: false,
 
@@ -25,6 +25,9 @@
 
     // Enable to rotate the image
     rotatable: true,
+
+    // Enable to height-definition the image
+    hdable: false,
 
     // Enable to scale the image
     scalable: true,
@@ -66,6 +69,9 @@
     // Type: String (an image attribute) or Function (should return an image URL)
     url: 'src',
 
+    // Define hd url
+    hdUrl: 'data-hd-url',
+
     // Event shortcuts
     build: null,
     built: null,
@@ -75,8 +81,8 @@
     hidden: null,
     view: null,
     viewed: null
-  };
+};
 
-  Viewer.setDefaults = function (options) {
+Viewer.setDefaults = function (options) {
     $.extend(Viewer.DEFAULTS, options);
-  };
+};
